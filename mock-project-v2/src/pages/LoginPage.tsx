@@ -1,0 +1,95 @@
+import { useDispatch, useSelector } from "react-redux"
+import { Link, useNavigate } from "react-router-dom"
+import { Button, Container, Form } from "react-bootstrap"
+import { Field, FormikHelpers, Formik, Form as FormikForm } from "formik"
+import * as Yup from "yup"
+
+import { postUsersLogin } from "../utils"
+import { RootState } from "../store"
+import { IUser } from "../types"
+
+export function LoginPage() {
+   interface IValues {
+      email: string
+      password: string
+   }
+
+   const user: IUser | null = useSelector((state: RootState) => state.user.user)
+   const dispatch = useDispatch()
+   const navigate = useNavigate()
+
+   const initialValues: IValues = {
+      email: "",
+      password: ""
+   }
+
+   const validationSchema = Yup.object().shape({
+      email: Yup.string()
+         .email("Invalid email")
+         .required("Email is required"),
+      password: Yup.string()
+         .min(8, "Password contains at least 8 characters")
+         .required("Password is required")
+   })
+
+   const onSubmitLoginForm = (values: IValues, actions: FormikHelpers<IValues>) => {
+      postUsersLogin({ user: values })
+         .then((response) => {
+            const { user } = response.data
+            dispatch({
+               type: "user",
+               payload: user
+            })
+            navigate("/")
+         })
+         .catch((reason) => {
+            const { errors } = reason.response.data
+            for (const field in errors) {
+               const messages = errors[field]
+               actions.setFieldError(field, `${field} ${messages[0]}`)
+            }
+         })
+   }
+
+   return (
+      <Container>
+         <div className="row py-4">
+            <div className="col-6 offset-3">
+               <div className="fs-1 text-center">Sign in</div>
+
+               <div className="text-center">
+                  <Link className="text-decoration-none" to="/register">Need an account?</Link>
+               </div>
+
+               <Formik
+                  initialValues={initialValues}
+                  validationSchema={validationSchema}
+                  onSubmit={onSubmitLoginForm}
+               >
+                  {({ values, errors }) => (
+                     <FormikForm>
+                        <div className="mt-3">
+                           <Field as={Form.Control} name="email" type="email" placeholder="Email" />
+                           {errors.email && (
+                              <Form.Text className="text-danger">{errors.email}</Form.Text>
+                           )}
+                        </div>
+
+                        <div className="mt-3">
+                           <Field as={Form.Control} name="password" type="password" placeholder="Password" />
+                           {errors.password && (
+                              <Form.Text className="text-danger">{errors.password}</Form.Text>
+                           )}
+                        </div>
+
+                        <div className="mt-3 text-end">
+                           <Button type="submit">Sign in</Button>
+                        </div>
+                     </FormikForm>
+                  )}
+               </Formik>
+            </div>
+         </div>
+      </Container >
+   )
+}
